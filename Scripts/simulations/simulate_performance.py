@@ -21,6 +21,36 @@ import AR_process as AR
 
 
 def rate_distortion_IA_packetloss(X, R, a, sig2w, packet_loss_prob):
+    """
+    For a source X and a sum-rate R, calculate central and side MSE distortion
+    as well as operational sum-rate for index assignment scheme for different 
+    nesting ratios.
+
+    Parameters
+    ----------
+    X : array
+        Soruce sequence.
+    R : float
+        Sum-rate.
+    a : array
+        Source coefficents.
+    sig2w : float
+        White Gaussian noise variance for source.
+    packet_loss_prob : float 
+        packet loss probability 0 <= packet_loss_prob < 1.
+
+    Returns
+    -------
+    D0 : array
+        Central MSE distortion.
+    Ds :  array
+        Side MSE distortion.
+    sum_rate : array
+        Operational sum-rate.
+    avg_rate : array
+        Operational marginal rate.
+
+    """
     nesting_ratios = [3, 5, 7]
     D0 = np.zeros(len(nesting_ratios))
     Ds = np.zeros(len(nesting_ratios))
@@ -48,6 +78,36 @@ def rate_distortion_IA_packetloss(X, R, a, sig2w, packet_loss_prob):
     
 
 def rate_distortion_sama_packetloss(X, R, a, sig2w, packet_loss_prob, print_rates= False):
+    """
+    For a source X and a sum-rate R, calculate central and side MSE distortion
+    as well as operational sum-rate for Samarawikcrama scheme for different 
+    rate pairs (R0, R1)
+
+    Parameters
+    ----------
+    X : array
+        Soruce sequence.
+    R : float
+        Sum-rate.
+    a : array
+        Source coefficents.
+    sig2w : float
+        White Gaussian noise variance for source.
+    packet_loss_prob : float 
+        packet loss probability 0 <= packet_loss_prob < 1.
+
+    Returns
+    -------
+    D0 : array
+        Central MSE distortion.
+    Ds :  array
+        Side MSE distortion.
+    sum_rate : array
+        Operational sum-rate.
+    avg_rate : array
+        Operational marginal rate.
+
+    """
     R0_list = np.linspace(0, R-3, 10)
     R1_list = (R - R0_list)/2
     
@@ -81,6 +141,36 @@ def rate_distortion_sama_packetloss(X, R, a, sig2w, packet_loss_prob, print_rate
 
 
 def rate_distortion_stag_packetloss(X, R, a, sig2w, packet_loss_prob, print_rates= False):
+    """
+    For a source X and a sum-rate R, calculate central and side MSE distortion
+    as well as operational sum-rate for staggering scheme for different 
+    rate pairs (R0, R1)
+
+    Parameters
+    ----------
+    X : array
+        Soruce sequence.
+    R : float
+        Sum-rate.
+    a : array
+        Source coefficents.
+    sig2w : float
+        White Gaussian noise variance for source.
+    packet_loss_prob : float 
+        packet loss probability 0 <= packet_loss_prob < 1.
+
+    Returns
+    -------
+    D0 : array
+        Central MSE distortion.
+    Ds :  array
+        Side MSE distortion.
+    sum_rate : array
+        Operational sum-rate.
+    avg_rate : array
+        Operational marginal rate.
+
+    """
     R0_list = np.linspace(0, R-3, 10)
     R1_list = (R - R0_list)/2
     
@@ -182,9 +272,6 @@ def mp_run_scheme(X, rates, a, sig2w, packet_loss_probs, scheme, j=0):
 
 
 def parallel_simulation(scheme, M_p, M_monte, X, rates, a, sig2w, packet_loss_probs):
-    """
-    Evt. kræve at X.shape[1] = M_monte
-    """
     pool = mp.Pool(M_p)
     input_vars = (rates, a, sig2w, packet_loss_probs, scheme)
     mp_input = [(X[j,:],) + input_vars + (j,)for j in range(M_monte)]

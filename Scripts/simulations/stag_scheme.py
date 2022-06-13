@@ -27,48 +27,93 @@ def quantization(signal, Delta, q):
 
 
 def stag_encode(X, a, Y_old, Delta_S, Delta_0):
+    """
+    Encoding of source sample X using the staggered scheme. 
 
+    Parameters
+    ----------
+    X : float
+        Source sample.
+    a : array
+        Source coefficents.
+    Y_old : array 
+        Side reconstruction samples to p previous time steps.
+    Delta_S: Quantizer stepsize for first stage quantizer
+    Delta_0: Quantizer stepsize for refinement quantizer
+
+    Returns
+    -------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    Y_new : array
+        Side reconstructions.
+
+    """
     
+    # Side quantization
     sgn = np.sign(Y_old[:,0] - Y_old[:,1])
-    
     shift = Delta_S/2*(1 - a.T @ sgn)[0]
-    
     U = (X - a.T @ Y_old)[0]
-  
-    
     U_quant = quantization(U, Delta_S, shift)
     
 
     # Reconstruction
     Y_new = (U_quant + a.T @ Y_old)[0]
-
     Y_0_C = np.mean(Y_new)
+    
+    # Central quantization
     e_c = X - Y_0_C
-    
     e_c_quant = np.round((e_c)/Delta_0)*Delta_0
-    
     
     return U_quant, e_c_quant, Y_new
 
 
 def stag_decode(U_quant, e_c_quant, a, Y_old, Delta_S, Delta_0, received_packet):
-    
+    """
+    Decoding functions of staggered scheme. 
+
+    Parameters
+    ----------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    a : array
+        Source coefficents.
+    Y_old : array 
+        Side reconstruction samples to p previous time steps.
+    Delta_S: Quantizer stepsize for first stage quantizer
+    Delta_0: Quantizer stepsize for refinement quantizer
+    received_packet : boolean array
+        Array deciding which packets are recieved. True = Recieved.
+
+    Returns
+    -------
+    Y_0 : float
+        Central reconstruction.
+    Y_new : array
+        Side reconstructions.
+    Y_used : float
+        The used reconstruction. Depends on received_packet.
+    """
     
     
     Y_new = (U_quant + a.T @ Y_old)[0]
     
         
-    if not received_packet.all():
-        if received_packet.any():            
+    if not received_packet.all(): 
+        if received_packet.any():  # if one packet received          
             Y_0 = 0
             Y_used = Y_new[received_packet]
             
-        elif not received_packet.any():
+        elif not received_packet.any(): # if no packets received
             Y_0 = 0
             Y_used = np.mean(Y_new)
     
             
-    if received_packet.all():
+    if received_packet.all(): # If both packets received. 
         Y_0_C = np.mean(Y_new)
         Y_0 = Y_0_C + (e_c_quant)
         Y_used = Y_0
@@ -79,7 +124,19 @@ def stag_decode(U_quant, e_c_quant, a, Y_old, Delta_S, Delta_0, received_packet)
 
 def fix_stag_setup(R1, R0, a, sig2w): 
     """
-    Setup of the Samarawickrama scheme. Works for ar(1) and ar(p)
+    Setup of the staggered scheme. Works for ar(1) and ar(p)
+    
+    Inputs:
+        R1:   Rate of first stage quantizer (float)
+        R0:   Rate of refimement quantizer (float)
+        a:    Source coefficients (array)
+        sig2w White Gaussian noise variance for source (float)
+    
+    Returns:
+        Delta_S: Quantizer stepsize for first stage quantizer
+        Delta_0: Quantizer stepsize for refinement quantizer
+        pi_s:    Theoretic (approximate) side MSE distortion
+        pi_0:    Theoretic (approximate) central MSE distortion
     """
     
     k = np.e*np.pi*2
@@ -98,6 +155,40 @@ def fix_stag_setup(R1, R0, a, sig2w):
 
 
 def run_stag_scheme(X, R1, R0, a, sig2w, packet_loss_prob):
+    """
+    For a source sequence X, and a rate pair (R1, R0) compute the recontruction
+    sequences. 
+    
+    IT IS ASSUMED THAT THE ENCODER AND DECODER ARE SYNCHRONIZED. THUS THEY USE 
+    THE SAME Y_OLD EVEN IF PACKET LOSSES OCCUR. 
+
+    Parameters
+    ----------
+    X : array
+        Soruce sequence.
+    R1:   Rate of first stage quantizer (float)
+    R0:   Rate of refimement quantizer (float)
+    a : array
+        Source coefficents.
+    sig2w : float
+        White Gaussian noise variance for source.
+    packet_loss_prob : float 
+        packet loss probability 0 <= packet_loss_prob < 1.
+
+    Returns
+    -------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    Y_0 : array
+        Central reconstruction sequence.
+    Y_side : array
+        Side reconstruction sequences.
+    Y_used : array
+        Used reconstruction sequence.
+
+    """
     
     p = len(a)
     N = len(X)
@@ -133,8 +224,8 @@ def run_stag_scheme(X, R1, R0, a, sig2w, packet_loss_prob):
         
         Y_old = Y_side[i+1:i+p+1,:]
         
-    
-    return U_quant, e_c_quant, Y_0, Y_side[p:,:], Y_used
+    Y_side = Y_side[p:,:]
+    return U_quant, e_c_quant, Y_0, Y_side, Y_used
 
 
 

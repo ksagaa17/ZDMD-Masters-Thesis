@@ -68,48 +68,48 @@ def encoder(X, Y_old, a, Delta_C, index_map):
     return q, U, b, Y
 
 
-def encoder_2(X, Y_old, a, Delta_C, index_map):
-    """
-    Encoder function for index assignment scheme.
+# def encoder_2(X, Y_old, a, Delta_C, index_map):
+#     """
+#     Encoder function for index assignment scheme.
 
-    Parameters
-    ----------
-    X : float
-        Source sample.
-    Y_old : ndarray
-        past p samples.
-    a : ndarray
-        The p AR(p) coefficients.
-    Delta_C : float
-        Bin size for central decoder.
-    index_map : ndarray
-        Matrix with index assigment table. First column is central quantization
-        and the rest are the associated assigned indexes.
+#     Parameters
+#     ----------
+#     X : float
+#         Source sample.
+#     Y_old : ndarray
+#         past p samples.
+#     a : ndarray
+#         The p AR(p) coefficients.
+#     Delta_C : float
+#         Bin size for central decoder.
+#     index_map : ndarray
+#         Matrix with index assigment table. First column is central quantization
+#         and the rest are the associated assigned indexes.
 
-    Returns
-    -------
-    q : ndarray
-        Side descriptions.
-    shift : float
-        How much to add for one shift.
-    n_shifts : int
-        number of shifts needed.
-    U : float
-        prediction error sample.
+#     Returns
+#     -------
+#     q : ndarray
+#         Side descriptions.
+#     shift : float
+#         How much to add for one shift.
+#     n_shifts : int
+#         number of shifts needed.
+#     U : float
+#         prediction error sample.
 
-    """
+#     """
     
-    U = X - a.T @ Y_old
+#     U = X - a.T @ Y_old
     
-    # Central quantizer 
-    b = np.round(U/Delta_C)*Delta_C 
+#     # Central quantizer 
+#     b = np.round(U/Delta_C)*Delta_C 
     
-    # Index assigment
-    q = index_assignment(b, index_map, Delta_C)
+#     # Index assigment
+#     q = index_assignment(b, index_map, Delta_C)
     
-    Y = np.mean(q) + a.T @ Y_old
+#     Y = np.mean(q) + a.T @ Y_old
     
-    return q, U, b, Y
+#     return q, U, b, Y
 
 
 
@@ -173,6 +173,40 @@ def decoder(q, index_map, Delta_C, a, Y_old, received_packet):
 
 
 def run_index_assigment(X, Delta_C, index_map, a, packet_loss_prob, return_b = False):
+    """
+    For a source sequence X, and a index_map compute the recontruction
+    sequences. 
+    
+    IT IS ASSUMED THAT THE ENCODER AND DECODER ARE SYNCHRONIZED. THUS THEY USE 
+    THE SAME Y_OLD EVEN IF PACKET LOSSES OCCUR. 
+
+    Parameters
+    ----------
+    X : array
+        Soruce sequence.
+    R1:   Rate of first stage quantizer (float)
+    R0:   Rate of refimement quantizer (float)
+    a : array
+        Source coefficents.
+    sig2w : float
+        White Gaussian noise variance for source.
+    packet_loss_prob : float 
+        packet loss probability 0 <= packet_loss_prob < 1.
+
+    Returns
+    -------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    Y_0 : array
+        Central reconstruction sequence.
+    Y_side : array
+        Side reconstruction sequences.
+    Y_used : array
+        Used reconstruction sequence.
+
+    """
     p = a.shape[0]
     
     N = len(X)
@@ -209,6 +243,22 @@ def run_index_assigment(X, Delta_C, index_map, a, packet_loss_prob, return_b = F
 
 
 def binsize_index_assignment(R, a, sig2w, r=3):
+    """
+    Calculate the central quantizer stepsize for the index assignment scheme
+
+    Parameters
+    ----------
+    R : Sum-rate (float)
+    a : Source coefficients (array)
+    sig2w : White Gaussian noise variance for source (float)
+    r :  Nesting ratio. The default is 3. (odd int > 0, optional.)
+
+    Returns
+    -------
+    Delta_C : central quantizer stepsize (float)
+        
+
+    """
     nom = 12*2*np.pi*np.e*sig2w
     denom = 12*2**R*r**2 - 2*np.pi*np.e*np.linalg.norm(a)
     

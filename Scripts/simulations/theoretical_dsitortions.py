@@ -4,7 +4,7 @@ Created on Wed May 13 14:59:05 2022
 
 @author: Kristian Søgaard
 
-Compare the theoretical distortions
+Compare the theoretical distortions of schemes.
 """
 
 import numpy as np
@@ -12,7 +12,19 @@ import numpy as np
 
 def fix_stag_setup(R1, R0, a, sig2w): 
     """
-    Setup of the Samarawickrama scheme. Works for ar(1) and ar(p)
+    Setup of the staggered scheme. Works for ar(1) and ar(p)
+    
+    Inputs:
+        R1:   Rate of first stage quantizer (float)
+        R0:   Rate of refimement quantizer (float)
+        a:    Source coefficients (array)
+        sig2w White Gaussian noise variance for source (float)
+    
+    Returns:
+        Delta_S: Quantizer stepsize for first stage quantizer
+        Delta_0: Quantizer stepsize for refinement quantizer
+        pi_s:    Theoretic (approximate) side MSE distortion
+        pi_0:    Theoretic (approximate) central MSE distortion
     """
     
     k = np.e*np.pi*2
@@ -33,6 +45,19 @@ def fix_stag_setup(R1, R0, a, sig2w):
 def fix_wickrama_setup(R1, R0, a, sig2w, optimal=False): 
     """
     Setup of the Samarawickrama scheme. Works for ar(1) and ar(p)
+    
+    Inputs:
+        R1:   Rate of first stage quantizer (float)
+        R0:   Rate of refimement quantizer (float)
+        a:    Source coefficients (array)
+        sig2w White Gaussian noise variance for source (float)
+    
+    Returns:
+        Delta_S: Quantizer stepsize for first stage quantizer
+        Delta_0: Quantizer stepsize for refinement quantizer
+        pi_s:    Theoretic (approximate) side MSE distortion
+        pi_0:    Theoretic (approximate) central MSE distortion
+
     """
     k = np.e*np.pi*2
     a = a[0]
@@ -65,6 +90,28 @@ def fix_wickrama_setup(R1, R0, a, sig2w, optimal=False):
 
 
 def distortions(R, a, sig2w, N, shift_rate=False):
+    """
+    For a given sum-rate R, calculate a range of the theoretic 
+    MSE side and central distortions by varying the first stage and second stage
+    rates.
+
+    Parameters
+    ----------
+    R : Sum-rate (float)
+    a : Source coefficients (array)
+    sig2w : White Gaussian noise variance for source (float)
+    N : Number of different rate pairs (R0, R1)
+    shift_rate : Whether or not to compensate for using a bit on the shift, optional
+                 The default is False.
+
+    Returns
+    -------
+    side_dist : array
+        Theoretical side distortions for the staggered scheme.
+    cent_dist :  array
+        Theoretical central distortions for the staggered scheme.
+
+    """
     if shift_rate:
         R = R-1
     R0_list = np.linspace(0, R-4, N)
@@ -84,6 +131,26 @@ def distortions(R, a, sig2w, N, shift_rate=False):
 
 
 def distortions_sama(R, a, sig2w, N):
+    """
+    For a given sum-rate R, calculate a range of the theoretic 
+    MSE side and central distortions by varying the first stage and second stage
+    rates. The scheme is the Samarawickrama scheme.
+
+    Parameters
+    ----------
+    R : Sum-rate (float)
+    a : Source coefficients (array)
+    sig2w : White Gaussian noise variance for source (float)
+    N : Number of different rate pairs (R0, R1)
+   
+    Returns
+    -------
+    side_dist : array
+        Theoretical side distortions for the Samarawickrama scheme.
+    cent_dist :  array
+        Theoretical central distortions for the Samarawickrama scheme.
+
+    """
     R0_list = np.linspace(0, R-4, N)
     R1_list = (R - R0_list)/2
 
@@ -102,13 +169,50 @@ def distortions_sama(R, a, sig2w, N):
 
 
 def binsize_index_assignment(R, a, sig2w, r=3):
+    """
+    Calculate the central quantizer stepsize for the index assignment scheme
+
+    Parameters
+    ----------
+    R : Sum-rate (float)
+    a : Source coefficients (array)
+    sig2w : White Gaussian noise variance for source (float)
+    r :  Nesting ratio. The default is 3. (odd int > 0, optional.)
+
+    Returns
+    -------
+    Delta_C : central quantizer stepsize (float)
+        
+
+    """
     nom = 12*2*np.pi*np.e*sig2w
     denom = 12*2**R*r**2 - 2*np.pi*np.e*np.linalg.norm(a)
     
     Delta_C = np.sqrt(nom/denom)
     return Delta_C
 
+
 def IA_distortions(R, a, sig2w, N):
+    """
+    For a given sum-rate R, calculate a range of the theoretic 
+    MSE side and central distortions by for different nesting ratios for the
+    index assignment scheme.
+
+    Parameters
+    ----------
+    R : Sum-rate (float)
+    a : Source coefficients (array)
+    sig2w : White Gaussian noise variance for source (float)
+    N : Number of nesting ratios (int)
+   
+    Returns
+    -------
+    side_dist : array
+        Theoretical side distortions for the Samarawickrama scheme.
+    cent_dist :  array
+        Theoretical central distortions for the Samarawickrama scheme.
+
+    """
     nesting_ratios  = [2*(i+1)+1 for i in range(N)]
     
     side_dist = np.zeros(len(nesting_ratios))
@@ -126,13 +230,31 @@ def IA_distortions(R, a, sig2w, N):
 
 
 def lower_bound_distortions(R, a, sig2w):
+    """
+    For a given sum-rate R, calculate a range of the theoretic 
+    MSE side and central distortions by for different nesting ratios for the
+    index assignment scheme.
+
+    Parameters
+    ----------
+    R : Sum-rate (float)
+    a : Source coefficients (array)
+    sig2w : White Gaussian noise variance for source (float)
+   
+    Returns
+    -------
+    ds_list_theo : array
+        Theoretical lower bound on side distortions for ZDMD codes for AR(1) sources
+    d0_list_theo : array
+        Theoretical lower bound on central distortions for ZDMD codes for AR(1) sources.
+    
+
+    """
     d0_list_theo_1, ds_list_theo_1, _ = lb.theo_dist_bound(R/2, a, sig2w, N=1000, Ds_bound=1, fix_rho=True)
     d0_list_theo_2, ds_list_theo_2, _ = lb.theo_dist_bound(R/2, a, sig2w, N=1000, Ds_bound=0.01, fix_rho=False)
     d0_list_theo = np.concatenate((np.flip(d0_list_theo_2[ds_list_theo_2>ds_list_theo_1.max()]), d0_list_theo_1))
     ds_list_theo = np.concatenate((np.flip(ds_list_theo_2[ds_list_theo_2>ds_list_theo_1.max()]), ds_list_theo_1))
-    
-    
-    
+
     return ds_list_theo, d0_list_theo
 
 if __name__ == "__main__":
@@ -185,6 +307,7 @@ if __name__ == "__main__":
     
     side_dist_theo = np.zeros((len(rates),N))
     cent_dist_theo = np.zeros((len(rates),N))
+    
     # =============================================================================
     #   central vs side distortion where  rate is used on the shift   
     # =============================================================================
@@ -310,7 +433,7 @@ if __name__ == "__main__":
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower left", ncol=1, bbox_to_anchor=(0.11, 0.12))
     fig.tight_layout(rect=[0, 0.0, 1, 0.99])
-    plt.savefig("theo_figs/side_vs_cent_IA.pdf")
+    #plt.savefig("theo_figs/side_vs_cent_IA.pdf")
     plt.show()
     
     
@@ -355,7 +478,7 @@ if __name__ == "__main__":
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower left", ncol=1, bbox_to_anchor=(0.11, 0.18))
     fig.tight_layout(rect=[0, 0.0, 1, 0.99])
-    plt.savefig("theo_figs/side_vs_cent_stag_w_rate_loss.pdf")
+    #plt.savefig("theo_figs/side_vs_cent_stag_w_rate_loss.pdf")
     plt.show()
     
     

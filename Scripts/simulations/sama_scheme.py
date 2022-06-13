@@ -31,33 +31,79 @@ def quantization(signal, Delta, q):
 
 
 def sama_encode(X, Y, Delta_S, Delta_0, stag=True):
+    """
+    Encoding of source sample X using the Samarawickrama scheme. 
+
+    Parameters
+    ----------
+    X : float
+        Source sample.
+    Y_old : array 
+        Side reconstruction samples to p previous time steps.
+    Delta_S: Quantizer stepsize for first stage quantizer
+    Delta_0: Quantizer stepsize for refinement quantizer
+    stag: Bool. 
+
+    Returns
+    -------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    Y_new : array
+        Side reconstructions.
+
+    """
 
     if stag:
         shift = Delta_S/2
     else:
         shift = 0
     
+    # Side quantization
     U = X - Y
-    
-    
     U_quant = quantization(U, Delta_S, shift)
     
 
     # Reconstruction
     Y_new = U_quant + Y
-
     Y_0_C = np.mean(Y_new)
-    e_c = X - Y_0_C
     
-
-
+    # Central quantization
+    e_c = X - Y_0_C
     e_c_quant = np.round((e_c)/Delta_0)*Delta_0
     
     
     return U_quant, e_c_quant, Y_new, U
 
 
-def sama_decode(U_quant, e_c_quant, Y, Delta_S, Delta_0, received_packet, lost_history=None):
+def sama_decode(U_quant, e_c_quant, Y, Delta_S, Delta_0, received_packet):
+    """
+    Decoding functions of Samarawickrama scheme. 
+
+    Parameters
+    ----------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    Y_old : array 
+        Side reconstruction samples to p previous time steps.
+    Delta_S: Quantizer stepsize for first stage quantizer
+    Delta_0: Quantizer stepsize for refinement quantizer
+    received_packet : boolean array
+        Array deciding which packets are recieved. True = Recieved.
+
+    Returns
+    -------
+    Y_0 : float
+        Central reconstruction.
+    Y_new : array
+        Side reconstructions.
+    Y_used : float
+        The used reconstruction. Depends on received_packet.
+    """
+    
     
     Y_new = np.zeros(2)
     
@@ -87,6 +133,19 @@ def sama_decode(U_quant, e_c_quant, Y, Delta_S, Delta_0, received_packet, lost_h
 def fix_wickrama_setup(R1, R0, a, sig2w, optimal=False): 
     """
     Setup of the Samarawickrama scheme. Works for ar(1) and ar(p)
+    
+    Inputs:
+        R1:   Rate of first stage quantizer (float)
+        R0:   Rate of refimement quantizer (float)
+        a:    Source coefficients (array)
+        sig2w White Gaussian noise variance for source (float)
+    
+    Returns:
+        Delta_S: Quantizer stepsize for first stage quantizer
+        Delta_0: Quantizer stepsize for refinement quantizer
+        pi_s:    Theoretic (approximate) side MSE distortion
+        pi_0:    Theoretic (approximate) central MSE distortion
+
     """
     k = np.e*np.pi*2
     a = a[0]
@@ -119,7 +178,40 @@ def fix_wickrama_setup(R1, R0, a, sig2w, optimal=False):
 
 
 def run_samacheme(X, R1, R0, a, sig2w, packet_loss_prob, print_cor=False):
+    """
+    For a source sequence X, and a rate pair (R1, R0) compute the recontruction
+    sequences. 
     
+    IT IS ASSUMED THAT THE ENCODER AND DECODER ARE SYNCHRONIZED. THUS THEY USE 
+    THE SAME Y_OLD EVEN IF PACKET LOSSES OCCUR. 
+
+    Parameters
+    ----------
+    X : array
+        Soruce sequence.
+    R1:   Rate of first stage quantizer (float)
+    R0:   Rate of refimement quantizer (float)
+    a : array
+        Source coefficents.
+    sig2w : float
+        White Gaussian noise variance for source.
+    packet_loss_prob : float 
+        packet loss probability 0 <= packet_loss_prob < 1.
+
+    Returns
+    -------
+    U_quant : array
+        Output of side quantizers.
+    e_c_quant : float
+        Output of central quantizer.
+    Y_0 : array
+        Central reconstruction sequence.
+    Y_side : array
+        Side reconstruction sequences.
+    Y_used : array
+        Used reconstruction sequence.
+
+    """
     N = len(X)
     U_quant = np.zeros((N,2))
     U = np.zeros((N,2))
