@@ -419,7 +419,7 @@ def plot_results2(filenames):
     rate_op = sum([rate_op[idx[i]]*counts[i]/np.sum(counts) for i in range(len(idx))])
     rate_for_theo.append(rate_op)
     
-    ax.plot(packet_loss_probs, distortion, label=scheme_labels[i] + fr" $R={np.round(rate_op, decimals=2)}$", color=colors[2], marker = markers[2], markersize=5)
+    ax.plot(packet_loss_probs, distortion, label=scheme_labels[2] + fr" $R={np.round(rate_op, decimals=2)}$", color=colors[2], marker = markers[2], markersize=5)
     
     #Theoretic
     packet_loss_probs = packet_loss_probs/100
@@ -433,7 +433,7 @@ def plot_results2(filenames):
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels, loc="lower right", ncol=1, bbox_to_anchor=(1, 0.12))
     fig.tight_layout(rect=[0, 0, 1, 1])
-    #plt.savefig(f"results/figures/distortion_vs_plp_zoom.pdf")
+    plt.savefig(f"results/figures/distortion_vs_plp_zoom.pdf")
     plt.show()
     
     
